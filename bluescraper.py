@@ -134,8 +134,7 @@ def stringify_children(node):
 RECIPES 
 """""""""""""""""""""""""""
 
-def get_full_recipes(limit=180):
-    recipe_links = serialize_all_recipes()
+def get_full_recipes(recipe_links, limit=180):    
     full_recipes = {}
     with open('./recipes-minify.json', 'r') as f:
         full_recipes = json.load(f)
@@ -161,6 +160,13 @@ def get_full_recipes(limit=180):
         time.sleep(1)
 
     print full_recipes
+    return full_recipes
+
+
+def get_all_recipes():
+    recipe_links = serialize_all_recipes()
+
+    full_recipes = get_full_recipes(recipe_links)
 
     print '\nTotal Number of Recipes to Serialized: ' + str(len(full_recipes))
 
@@ -169,14 +175,27 @@ def get_full_recipes(limit=180):
     with open('./recipes-minify.json', 'w') as f:
         f.write(json.dumps(full_recipes))
 
+"""
+def get_recipe_links_from_web(link):
+    page = requests.get(link)
+    tree = html.fromstring(page.content)
+    elem = tree.xpath('//span[@itemprop="nutrition"]')
+"""
+
 def get_recipes_links(link):
     full_recipe_text = ''
-    with open(link, 'r') as f:
-        full_recipe_text = f.read()
-    #tree = html.fromstring(full_recipe_text)
+    if link.startswith('http'):
+        page = requests.get(link)
+        full_recipe_text = page.content
+    else:
+        with open(link, 'r') as f:
+            full_recipe_text = f.read()
 
-    recipe_re = re.compile('<a href="https:\/\/www\.blueapron\.com\/recipes\/(.+?)">')
+    recipe_re = re.compile('<a href="(?:https:\/\/www\.blueapron\.com)?\/recipes\/(.+?)">')
     recipes = recipe_re.findall(full_recipe_text)
+
+
+
     return recipes
 
 def serialize_all_recipes():
@@ -207,6 +226,29 @@ def serialize_all_recipes():
 
     return recipe_to_tags
 
+def get_recipes_this_week():
+    links = get_recipes_links(THIS_WEEK_RECIPES_URL)
+    print links
+    full_recipes = []
+    i = 0
+    for link in links:
+        i += 1
+        page = requests.get(BLUE_URL.format(link))
+        ingredients = get_ingredients(page)
+        calories = get_calorie_count(page)
+        name = link.replace('-', ' ').title()
+        url = BLUE_URL.format(link)
+        # We don't care about the season/cuisine/protein here since it's a limited set
+        recipe = Recipe(name, ingredients, url, calories, [], [], [])
+        recipe_json = recipe.to_json_serializable()
+        full_recipes.append(recipe)
+        print "({0}/{1}) - {2}".format(str(i), str(len(links)), name)
+
+        time.sleep(1)
+
+    return full_recipes
+
+
 """""""""""""""""""""""""""
 MAIN 
 """""""""""""""""""""""""""
@@ -216,7 +258,7 @@ def main():
     parser.add_argument("--recipe")
     args = parser.parse_args()
 
-    get_full_recipes()
+    get_all_recipes()
     #serialize_all_recipes()
 
 if __name__ == '__main__':
