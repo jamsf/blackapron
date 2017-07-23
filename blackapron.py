@@ -25,10 +25,25 @@ def main():
     elif action == 'random':
     	get_random_meals()
 
-def generate_shopping_list():
+def generate_shopping_list(recipes):
 	bar_print('Generating Shopping List...')
 
-	print 'Not implemented yet...'
+	grocery_list = {}
+	for recipe in recipes:
+		for ing in recipe.ingredients:
+			if ing.name in grocery_list:
+				if ing.measurement in grocery_list[ing.name]:
+					grocery_list[ing.name][ing.measurement] += float(ing.amount)
+				else:
+					grocery_list[ing.name] = {ing.measurement: float(ing.amount)}
+			else:
+				grocery_list[ing.name] = {ing.measurement: float(ing.amount)}
+
+	print "GROCERY LIST:"
+	for grocery,measurements in grocery_list.iteritems():
+		for meas,amount in measurements.iteritems():
+			print "{0} - {1} {2}".format(grocery, meas, amount)
+
 
 def get_meals_this_week():
 	bar_print('Generating This Week\'s Meal Plan!')
@@ -69,6 +84,8 @@ def get_meals_this_week():
 		confirmed = yes_no_question('\nAre you sure this is what you want to eat?')
 
 	print 'Congrats! You have a meal plan for the week!'
+
+	generate_shopping_list(recipe_choices)
 
 def interactive_mode():
 	logging.error('Random meal plans not implemented yet.')
